@@ -1,6 +1,6 @@
 {
-  "name": "slides",
-  "short_name": "slides",
+  "name": "Slides",
+  "short_name": "Slides",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -28,5 +28,6 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "description": "Make and present slide decks offline. Free, private, stored on your device."
 }

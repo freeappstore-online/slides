@@ -1,19 +1,34 @@
 import { useEffect, useState } from "react";
 import { initApp } from "@freeappstore/sdk";
+import { useTheme } from "@freeappstore/sdk/hooks";
 import { type NavItem, PageHeader, Shell } from "@freeappstore/sdk/ui";
+import { DeckList } from "./components/DeckList";
+import { Editor } from "./components/Editor";
+import { Present, Presenter } from "./components/Present";
 
 // "slides" is replaced by the CLI scaffold or deployment flow with this app's id.
 export const fas = initApp({ appId: "slides" });
 
-// The app's screens. Shell renders them as the navbar: a <nav> in its topbar
-// with the current screen highlighted, collapsing to a menu on phones.
-// Add one entry per primary screen; `title` becomes the browser tab title.
 const NAV: NavItem[] = [
-  { label: "Home", href: "/", title: "slides" },
-  { label: "About", href: "/about", title: "About — slides" },
+  { label: "Decks", href: "/", title: "Slides" },
+  { label: "About", href: "/about", title: "About — Slides" },
 ];
 
+export type Navigate = (href: string, options?: { replace?: boolean }) => void;
+
+type Route =
+  | { screen: "list" }
+  | { screen: "about" }
+  | { screen: "edit" | "present" | "presenter"; deckId: string };
+
+function parseRoute(path: string): Route {
+  const match = /^\/deck\/([\w-]+)(?:\/(present|presenter))?\/?$/.exec(path);
+  if (match) return { screen: match[2] === "present" ? "present" : match[2] === "presenter" ? "presenter" : "edit", deckId: match[1] };
+  return path === "/about" ? { screen: "about" } : { screen: "list" };
+}
+
 export default function App() {
+  useTheme(); // applies the shared light/dark preference on every screen, including present mode
   const [path, setPath] = useState(() => window.location.pathname);
 
   // Keep the screen in step with the browser's back and forward buttons.
@@ -23,33 +38,46 @@ export default function App() {
     return () => window.removeEventListener("popstate", sync);
   }, []);
 
-  // Nav clicks switch screens without a page load. Shell scrolls to the top
-  // and moves focus to the new screen's PageHeader.
-  const navigate = (href: string) => {
-    window.history.pushState(null, "", href);
+  const navigate: Navigate = (href, options) => {
+    if (options?.replace) window.history.replaceState(null, "", href);
+    else window.history.pushState(null, "", href);
     setPath(window.location.pathname);
   };
 
+  const route = parseRoute(path);
+
+  // Presenting takes the whole screen, outside the app frame.
+  if (route.screen === "present") return <Present deckId={route.deckId} navigate={navigate} />;
+  if (route.screen === "presenter") return <Presenter deckId={route.deckId} navigate={navigate} />;
+
   return (
-    <Shell app={fas} appName={"slides"} nav={NAV} onNavigate={navigate}>
-      <div className="mx-auto w-full max-w-3xl p-4 sm:p-8">
-        {path === "/about" ? <About /> : <Home />}
-      </div>
+    <Shell app={fas} appName="Slides" nav={NAV} onNavigate={navigate}>
+      {route.screen === "edit" ? (
+        <Editor key={route.deckId} deckId={route.deckId} navigate={navigate} />
+      ) : (
+        <div className="mx-auto w-full max-w-5xl p-4 sm:p-8">{route.screen === "about" ? <About /> : <DeckList navigate={navigate} />}</div>
+      )}
     </Shell>
   );
-}
-
-function Home() {
-  return <PageHeader title={"Welcome to slides"} description="Edit web/src/App.tsx to get started." />;
 }
 
 function About() {
   return (
     <>
       <PageHeader title="About" />
-      <p style={{ color: "var(--muted)" }}>
-        slides is a free app on <a href="https://freeappstore.online">FreeAppStore</a>.
-      </p>
+      <div className="flex max-w-2xl flex-col gap-3 text-ink">
+        <p>
+          Slides is a free slide deck editor and presenter. Your decks and images are stored only on this device, and the app works
+          offline once it has loaded.
+        </p>
+        <p>
+          Write slides as Markdown (one slide per <code>---</code>), present them full screen, and use the presenter view for speaker
+          notes and the next slide. Make a JSON backup to move decks to another device.
+        </p>
+        <p className="text-muted">
+          Slides is a free app on <a className="text-accent underline" href="https://freeappstore.online">FreeAppStore</a>.
+        </p>
+      </div>
     </>
   );
 }

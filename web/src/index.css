@@ -136,4 +136,12 @@ html { overflow-wrap: anywhere; }
 body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
 img, video, canvas { max-width: 100%; }
 
+/* Print / PDF: the editor portals every slide into a print-only container;
+   one slide per landscape page, with theme backgrounds kept. */
+@media print {
+  @page { size: landscape; margin: 0; }
+  body { padding: 0; }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
+
 }

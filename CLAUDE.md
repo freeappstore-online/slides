@@ -36,3 +36,11 @@ Canonical source and guidance:
 https://github.com/freeappstore-online/platform/blob/main/docs/composable-starter-contract.md
 https://github.com/freeappstore-online/platform/blob/main/docs/starter-release.md
 https://github.com/freeappstore-online/platform/blob/main/CONTRIBUTING.md#updating-the-external-app-starter-repositories
+
+## Slides (app-specific)
+
+Offline slide deck editor and presenter. Decks (images included, as data: URLs) live in
+IndexedDB via `web/src/storage.ts`; nothing is synced. Pure logic is in `web/src/deck.ts`
+(deck operations, JSON backup) and `web/src/markdown.ts` (Markdown import/export, `---`
+separates slides), both unit tested. Routes: `/`, `/deck/<id>`, `/deck/<id>/present`,
+`/deck/<id>/presenter` (synced with an audience window over BroadcastChannel).
