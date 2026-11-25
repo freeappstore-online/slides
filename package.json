@@ -1,0 +1,24 @@
+{
+  "name": "slides",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=22"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  },
+  "scripts": {
+    "dev": "pnpm --filter @slides/web dev",
+    "build": "pnpm --filter @slides/web build",
+    "preview": "pnpm --filter @slides/web preview",
+    "typecheck": "pnpm --filter @slides/web exec tsc -b",
+    "test": "pnpm --filter @slides/web test"
+  },
+  "dependencies": {
+    "@freeappstore/sdk": "^0.16.39"
+  }
+}
