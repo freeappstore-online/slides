@@ -1,7 +1,7 @@
 // Deck model and pure deck operations. Everything here is free of browser
 // storage so it can be unit tested; storage.ts persists the results.
 
-export const LAYOUTS = ["title", "content", "two-column", "image"] as const;
+export const LAYOUTS = ["title", "content", "two-column", "image", "section", "quote", "stat", "image-text"] as const;
 export type Layout = (typeof LAYOUTS)[number];
 
 export const LAYOUT_LABELS: Record<Layout, string> = {
@@ -9,9 +9,28 @@ export const LAYOUT_LABELS: Record<Layout, string> = {
   content: "Title + content",
   "two-column": "Two columns",
   image: "Image",
+  section: "Section header",
+  quote: "Quote",
+  stat: "Big number",
+  "image-text": "Image + text",
 };
 
-export const THEMES = ["paper", "contrast", "bold", "soft", "sky", "mint"] as const;
+export const THEMES = [
+  "paper",
+  "contrast",
+  "bold",
+  "soft",
+  "sky",
+  "mint",
+  "midnight",
+  "graphite",
+  "forest",
+  "plum",
+  "terminal",
+  "sunset",
+  "ocean",
+  "lemon",
+] as const;
 export type Theme = (typeof THEMES)[number];
 
 export const THEME_LABELS: Record<Theme, string> = {
@@ -21,25 +40,61 @@ export const THEME_LABELS: Record<Theme, string> = {
   soft: "Soft",
   sky: "Sky",
   mint: "Mint",
+  midnight: "Midnight (dark)",
+  graphite: "Graphite (dark)",
+  forest: "Forest (dark)",
+  plum: "Plum (dark)",
+  terminal: "Terminal (dark)",
+  sunset: "Sunset",
+  ocean: "Ocean",
+  lemon: "Lemon",
 };
+
+/** Per-deck font pairing. "classic" is the original look and the default for decks without a font. */
+export const FONTS = ["classic", "sans", "serif", "rounded", "mono", "display"] as const;
+export type Font = (typeof FONTS)[number];
+
+export const FONT_LABELS: Record<Font, string> = {
+  classic: "Classic",
+  sans: "Sans",
+  serif: "Serif",
+  rounded: "Rounded",
+  mono: "Mono",
+  display: "Display",
+};
+
+export const ALIGNS = ["left", "center"] as const;
+export type Align = (typeof ALIGNS)[number];
+
+export const SIZES = ["small", "medium", "large"] as const;
+export type TextSize = (typeof SIZES)[number];
 
 export interface Slide {
   id: string;
   layout: Layout;
   title: string;
-  /** Main text. Lines starting with "- " or "* " are bullets. Subtitle on title slides, caption on image slides. */
+  /**
+   * Main text. Lines starting with "- " or "* " are bullets. Subtitle on title and section slides,
+   * caption on image slides, the quote on quote slides, the label under a big number.
+   */
   body: string;
-  /** Right column of a two-column slide. */
+  /** Right column of a two-column slide; attribution on a quote slide. */
   body2: string;
-  /** Image as a data: URL, kept inside the deck so backups are self-contained. */
+  /** Image as a data: URL (kept inside the deck so backups are self-contained) or an https URL. */
   image: string;
   notes: string;
+  /** Text alignment; missing means the layout's default. */
+  align?: Align;
+  /** Body text size; missing means medium. */
+  size?: TextSize;
 }
 
 export interface Deck {
   id: string;
   title: string;
   theme: Theme;
+  /** Missing on decks made before fonts existed: they use "classic". */
+  font?: Font;
   slides: Slide[];
   createdAt: number;
   updatedAt: number;
@@ -118,7 +173,9 @@ export function isSlide(value: unknown): value is Slide {
     isRecord(value) &&
     typeof value.id === "string" &&
     LAYOUTS.includes(value.layout as Layout) &&
-    ["title", "body", "body2", "image", "notes"].every((key) => typeof value[key] === "string")
+    ["title", "body", "body2", "image", "notes"].every((key) => typeof value[key] === "string") &&
+    (value.align === undefined || ALIGNS.includes(value.align as Align)) &&
+    (value.size === undefined || SIZES.includes(value.size as TextSize))
   );
 }
 
@@ -128,6 +185,7 @@ export function isDeck(value: unknown): value is Deck {
     typeof value.id === "string" &&
     typeof value.title === "string" &&
     THEMES.includes(value.theme as Theme) &&
+    (value.font === undefined || FONTS.includes(value.font as Font)) &&
     Array.isArray(value.slides) &&
     value.slides.length > 0 &&
     value.slides.every(isSlide) &&

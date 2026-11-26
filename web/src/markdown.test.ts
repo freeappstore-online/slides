@@ -89,6 +89,35 @@ describe("deckToMarkdown", () => {
   });
 });
 
+describe("new layouts and styles", () => {
+  it("round-trips section, quote, stat and image + text slides with font and text styles", () => {
+    const deck = createDeck("Styled", [
+      createSlide({ layout: "section", title: "Part 1", body: "Context", align: "center" }),
+      createSlide({ layout: "quote", body: "Simplicity is the ultimate sophistication.", body2: "Leonardo da Vinci" }),
+      createSlide({ layout: "stat", title: "87%", body: "of users came back" }),
+      createSlide({ layout: "image-text", title: "Example", image: "https://example.com/a.png", body: "- one\n- two", size: "large" }),
+      createSlide({ layout: "content", title: "Big", body: "Text", align: "center", size: "small" }),
+    ]);
+    deck.theme = "sunset";
+    deck.font = "display";
+    const markdown = deckToMarkdown(deck);
+    expect(markdown).toContain("font: display");
+    expect(markdown).toContain("<!-- layout: content, align: center, size: small -->");
+    const back = markdownToDeck(markdown);
+    expect(back.font).toBe("display");
+    expect(back.theme).toBe("sunset");
+    expect(back.slides.map(strip)).toEqual(deck.slides.map(strip));
+  });
+
+  it("ignores unknown style values and leaves old decks without a font line", () => {
+    const deck = markdownToDeck("<!-- layout: content, align: justify, size: large -->\n# A\nText");
+    expect(deck.slides[0]).toMatchObject({ layout: "content", size: "large" });
+    expect(deck.slides[0].align).toBeUndefined();
+    expect(deck.font).toBeUndefined();
+    expect(deckToMarkdown(createDeck("Plain"))).not.toContain("font:");
+  });
+});
+
 describe("parseBody", () => {
   it("groups bullets into lists with depth and keeps paragraphs and code", () => {
     expect(parseBody("Intro\nmore\n\n- a\n  - b\n* c\n\n```\ncode\n```")).toEqual([

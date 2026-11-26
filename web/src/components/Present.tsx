@@ -132,7 +132,7 @@ export function Present({ deckId, navigate }: { deckId: string; navigate: Naviga
       onPointerCancel={() => (start.current = null)}
     >
       <div className="w-[min(100vw,calc(100dvh*16/9))]" aria-live="polite">
-        <SlideView slide={deck.slides[current]} theme={deck.theme} />
+        <SlideView slide={deck.slides[current]} theme={deck.theme} font={deck.font} />
       </div>
       <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-2 p-3 opacity-0 transition-opacity focus-within:opacity-100 hover:opacity-100 pointer-coarse:opacity-80">
         <Button onClick={() => go(current - 1)} disabled={current === 0} aria-label="Previous slide">
@@ -197,7 +197,7 @@ export function Presenter({ deckId, navigate }: { deckId: string; navigate: Navi
 
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <section aria-label="Current slide" className="flex min-w-0 flex-col gap-3">
-          <SlideView slide={slide} theme={deck.theme} className="rounded-lg shadow-sm" />
+          <SlideView slide={slide} theme={deck.theme} font={deck.font} className="rounded-lg shadow-sm" />
           <div className="grid grid-cols-2 gap-2">
             <Button className="min-h-14 text-base" onClick={() => go(current - 1)} disabled={current === 0}>
               ← Previous
@@ -211,7 +211,7 @@ export function Presenter({ deckId, navigate }: { deckId: string; navigate: Navi
           <section aria-label="Next slide" className="flex flex-col gap-2">
             <h2 className="font-sans text-sm font-semibold text-muted">Next</h2>
             {next ? (
-              <SlideView slide={next} theme={deck.theme} className="max-w-sm rounded-md opacity-90" />
+              <SlideView slide={next} theme={deck.theme} font={deck.font} className="max-w-sm rounded-md opacity-90" />
             ) : (
               <p className="text-muted">End of deck</p>
             )}

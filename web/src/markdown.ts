@@ -5,6 +5,7 @@
 //   ---
 //   title: My deck
 //   theme: paper
+//   font: serif
 //   ---
 //
 //   <!-- layout: title -->
@@ -21,9 +22,26 @@
 //   # Next slide
 //
 // Slides are separated by a line containing only `---`. Two-column slides split
-// their columns with `<!-- column -->`; image slides carry one `![](...)` line.
+// their columns with `<!-- column -->` (a quote slide puts its attribution after
+// it); image slides carry one `![](...)` line. The layout comment may also set
+// the text style: `<!-- layout: content, align: center, size: large -->`.
 
-import { createDeck, createSlide, LAYOUTS, THEMES, type Deck, type Layout, type Slide, type Theme } from "./deck";
+import {
+  ALIGNS,
+  createDeck,
+  createSlide,
+  FONTS,
+  LAYOUTS,
+  SIZES,
+  THEMES,
+  type Align,
+  type Deck,
+  type Font,
+  type Layout,
+  type Slide,
+  type TextSize,
+  type Theme,
+} from "./deck";
 
 // ---------------------------------------------------------------------------
 // Body text → blocks (used by the slide renderer)
@@ -109,11 +127,12 @@ function escapeText(text: string): string[] {
 }
 
 function slideToMarkdown(slide: Slide): string {
-  const lines: string[] = [`<!-- layout: ${slide.layout} -->`];
+  const style = [slide.align && `align: ${slide.align}`, slide.size && `size: ${slide.size}`].filter(Boolean);
+  const lines: string[] = [`<!-- layout: ${[slide.layout, ...style].join(", ")} -->`];
   if (slide.title.trim()) lines.push(`# ${slide.title.trim().replace(/\s*\n\s*/g, " ")}`, "");
-  if (slide.layout === "image" && slide.image) lines.push(`![${slide.title.replace(/[[\]]/g, "")}](${slide.image})`, "");
+  if ((slide.layout === "image" || slide.layout === "image-text") && slide.image) lines.push(`![${slide.title.replace(/[[\]]/g, "")}](${slide.image})`, "");
   if (slide.body.trim()) lines.push(...escapeText(slide.body.trim()), "");
-  if (slide.layout === "two-column") {
+  if (slide.layout === "two-column" || slide.layout === "quote") {
     lines.push("<!-- column -->", "");
     if (slide.body2.trim()) lines.push(...escapeText(slide.body2.trim()), "");
   }
@@ -123,7 +142,13 @@ function slideToMarkdown(slide: Slide): string {
 }
 
 export function deckToMarkdown(deck: Deck): string {
-  const header = ["---", `title: ${deck.title.replace(/\s*\n\s*/g, " ")}`, `theme: ${deck.theme}`, "---"].join("\n");
+  const header = [
+    "---",
+    `title: ${deck.title.replace(/\s*\n\s*/g, " ")}`,
+    `theme: ${deck.theme}`,
+    ...(deck.font ? [`font: ${deck.font}`] : []),
+    "---",
+  ].join("\n");
   return `${header}\n\n${deck.slides.map(slideToMarkdown).join("\n\n---\n\n")}\n`;
 }
 
@@ -131,7 +156,7 @@ export function deckToMarkdown(deck: Deck): string {
 // Import
 
 const SEPARATOR = /^---\s*$/;
-const LAYOUT_COMMENT = /^<!--\s*layout:\s*([\w-]+)\s*-->\s*$/i;
+const LAYOUT_COMMENT = /^<!--\s*layout:\s*([\w-]+)((?:\s*[,;]\s*[\w-]+\s*:\s*[\w-]+)*)\s*[,;]?\s*-->\s*$/i;
 const COLUMN_COMMENT = /^<!--\s*column\s*-->\s*$/i;
 const NOTES = /^notes?:\s?(.*)$/i;
 const HEADING = /^#{1,6}\s+(.*?)\s*#*\s*$/;
@@ -178,6 +203,7 @@ const trimBlankLines = (lines: string[]) => {
 
 function parseSlide(chunk: string[]): Slide {
   let layout: Layout | undefined;
+  const style: { align?: Align; size?: TextSize } = {};
   let title = "";
   let image = "";
   let notes: string[] | undefined;
@@ -197,6 +223,11 @@ function parseSlide(chunk: string[]): Slide {
       if (layoutMatch) {
         const value = layoutMatch[1].toLowerCase();
         if (LAYOUTS.includes(value as Layout)) layout = value as Layout;
+        for (const [, key, raw] of layoutMatch[2].matchAll(/([\w-]+)\s*:\s*([\w-]+)/g)) {
+          const option = raw.toLowerCase();
+          if (key.toLowerCase() === "align" && ALIGNS.includes(option as Align)) style.align = option as Align;
+          if (key.toLowerCase() === "size" && SIZES.includes(option as TextSize)) style.size = option as TextSize;
+        }
         continue;
       }
       if (COLUMN_COMMENT.test(line)) {
@@ -233,7 +264,7 @@ function parseSlide(chunk: string[]): Slide {
     else if (title && !body) layout = "title";
     else layout = "content";
   }
-  return createSlide({ layout, title, body, body2, image, notes: notes ? trimBlankLines(notes) : "" });
+  return createSlide({ layout, title, body, body2, image, notes: notes ? trimBlankLines(notes) : "", ...style });
 }
 
 /** Build a deck from Markdown. `fallbackTitle` (e.g. the file name) is used when the file names no title. */
@@ -244,5 +275,6 @@ export function markdownToDeck(markdown: string, fallbackTitle = "Imported deck"
   const title = meta.title || slides.find((slide) => slide.title)?.title || fallbackTitle;
   const deck = createDeck(title, slides);
   if (THEMES.includes(meta.theme as Theme)) deck.theme = meta.theme as Theme;
+  if (FONTS.includes(meta.font as Font)) deck.font = meta.font as Font;
   return deck;
 }

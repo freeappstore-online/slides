@@ -12,6 +12,7 @@ import {
   toBackup,
   updateSlide,
 } from "./deck";
+import { deckFromTemplate, TEMPLATES } from "./templates";
 
 const deckWith = (...titles: string[]) => createDeck("Test", titles.map((title) => createSlide({ title })));
 const titles = (deck: ReturnType<typeof createDeck>) => deck.slides.map((slide) => slide.title);
@@ -69,6 +70,46 @@ describe("deck operations", () => {
     expect(copy.title).toBe("Test (copy)");
     expect(titles(copy)).toEqual(["a", "b"]);
     copy.slides.forEach((slide, i) => expect(slide.id).not.toBe(source.slides[i].id));
+  });
+});
+
+describe("validation", () => {
+  // A deck as saved before themes, fonts and text styles were extended.
+  const oldDeck = {
+    id: "abc123",
+    title: "Old",
+    theme: "sky",
+    slides: [{ id: "s1", layout: "image", title: "Pic", body: "", body2: "", image: "", notes: "" }],
+    createdAt: 1,
+    updatedAt: 2,
+  };
+
+  it("still accepts decks saved before fonts and new layouts existed", () => {
+    expect(isDeck(oldDeck)).toBe(true);
+    expect(parseBackup(JSON.stringify({ app: "slides", version: 1, exportedAt: "", decks: [oldDeck] }))).toEqual([oldDeck]);
+  });
+
+  it("accepts the new layouts, themes, fonts and text styles", () => {
+    const slide = { ...oldDeck.slides[0], layout: "image-text", align: "center", size: "large" };
+    expect(isDeck({ ...oldDeck, theme: "midnight", font: "rounded", slides: [slide] })).toBe(true);
+  });
+
+  it("rejects unknown fonts, alignments and sizes", () => {
+    expect(isDeck({ ...oldDeck, font: "comic" })).toBe(false);
+    expect(isDeck({ ...oldDeck, slides: [{ ...oldDeck.slides[0], align: "justify" }] })).toBe(false);
+    expect(isDeck({ ...oldDeck, slides: [{ ...oldDeck.slides[0], size: 3 }] })).toBe(false);
+  });
+
+  it("makes a valid deck from every template", () => {
+    expect(TEMPLATES.map((template) => template.id)).toEqual(
+      expect.arrayContaining(["blank", "pitch", "project-update", "lesson", "workshop", "portfolio", "weekly-report", "talk"]),
+    );
+    for (const template of TEMPLATES) {
+      const deck = deckFromTemplate(template);
+      expect(isDeck(deck), template.id).toBe(true);
+      expect(deck.slides).toHaveLength(template.slides.length);
+      expect(new Set(deck.slides.map((slide) => slide.id)).size).toBe(deck.slides.length);
+    }
   });
 });
 

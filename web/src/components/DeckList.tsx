@@ -1,10 +1,11 @@
 import { type FormEvent, type RefObject, useCallback, useEffect, useId, useRef, useState } from "react";
 import { ConfirmDialog, EmptyState, Modal, PageHeader, Spinner, useToast } from "@freeappstore/sdk/ui";
 import type { Navigate } from "../App";
-import { createDeck, duplicateDeck, parseBackup, toBackup, type Deck } from "../deck";
+import { duplicateDeck, parseBackup, toBackup, type Deck } from "../deck";
 import { download } from "../files";
 import { markdownToDeck } from "../markdown";
 import { loadDecks, removeDeck, saveDecks } from "../storage";
+import { deckFromTemplate, TEMPLATES, type Template } from "../templates";
 import { SlideView } from "./SlideView";
 import { Button, FOCUS, INPUT } from "./ui";
 
@@ -16,6 +17,7 @@ export function DeckList({ navigate }: { navigate: Navigate }) {
   const [loadError, setLoadError] = useState("");
   const [renaming, setRenaming] = useState<Deck | null>(null);
   const [deleting, setDeleting] = useState<Deck | null>(null);
+  const [choosing, setChoosing] = useState(false);
   const markdownInput = useRef<HTMLInputElement>(null);
   const backupInput = useRef<HTMLInputElement>(null);
 
@@ -41,9 +43,12 @@ export function DeckList({ navigate }: { navigate: Navigate }) {
     await refresh();
   }
 
-  const newDeck = () =>
+  const newDeck = () => setChoosing(true);
+
+  const createFrom = (template: Template) =>
     run(async () => {
-      const deck = createDeck();
+      setChoosing(false);
+      const deck = deckFromTemplate(template);
       await saveDecks(deck);
       navigate(`/deck/${deck.id}`);
     });
@@ -118,7 +123,7 @@ export function DeckList({ navigate }: { navigate: Navigate }) {
                 className={`block ${FOCUS}`}
                 aria-label={`Open ${deck.title}`}
               >
-                <SlideView slide={deck.slides[0]} theme={deck.theme} className="pointer-events-none" />
+                <SlideView slide={deck.slides[0]} theme={deck.theme} font={deck.font} className="pointer-events-none" />
               </a>
               <div className="flex min-w-0 flex-col gap-1 p-3">
                 <h2 className="truncate font-sans text-base font-bold text-ink">{deck.title}</h2>
@@ -161,6 +166,33 @@ export function DeckList({ navigate }: { navigate: Navigate }) {
           }}
         />
       )}
+      <Modal open={choosing} title="New deck" maxWidth={960} onClose={() => setChoosing(false)}>
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Templates">
+          {TEMPLATES.map((template) => {
+            const preview = deckFromTemplate(template, 0);
+            return (
+              <li key={template.id} className="min-w-0">
+                <button
+                  type="button"
+                  onClick={() => createFrom(template)}
+                  aria-label={`${template.name} template: ${template.description}`}
+                  className={`flex w-full min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-panel text-left hover:border-accent ${FOCUS}`}
+                >
+                  <div aria-hidden="true">
+                    <SlideView slide={preview.slides[0]} theme={preview.theme} font={preview.font} className="pointer-events-none" />
+                  </div>
+                  <span className="flex flex-col gap-0.5 p-2.5">
+                    <span className="font-semibold text-ink">{template.name}</span>
+                    <span className="text-xs text-muted">
+                      {template.description} {template.slides.length} slide{template.slides.length === 1 ? "" : "s"}.
+                    </span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </Modal>
       <ConfirmDialog
         open={deleting !== null}
         title="Delete deck?"

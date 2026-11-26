@@ -4,18 +4,25 @@ import { ConfirmDialog, EmptyState, Spinner, useDocumentTitle, useToast } from "
 import type { Navigate } from "../App";
 import {
   addSlide,
+  ALIGNS,
   deleteSlide,
   duplicateSlide,
+  FONT_LABELS,
+  FONTS,
   LAYOUT_LABELS,
   LAYOUTS,
   moveSlide,
+  SIZES,
   THEME_LABELS,
   THEMES,
   toBackup,
   updateSlide,
+  type Align,
   type Deck,
+  type Font,
   type Layout,
   type Slide,
+  type TextSize,
   type Theme,
 } from "../deck";
 import { download, fileStem, imageToDataUrl } from "../files";
@@ -141,7 +148,21 @@ export function Editor({ deckId, navigate }: { deckId: string; navigate: Navigat
     }
   };
 
-  const bodyLabel: Record<Layout, string> = { title: "Subtitle", content: "Content", "two-column": "Left column", image: "Caption" };
+  const bodyLabel: Record<Layout, string> = {
+    title: "Subtitle",
+    content: "Content",
+    "two-column": "Left column",
+    image: "Caption",
+    section: "Subtitle",
+    quote: "Quote",
+    stat: "What the number means",
+    "image-text": "Text",
+  };
+  const titleLabel: Partial<Record<Layout, string>> = { stat: "Number", quote: "Heading (optional)" };
+  const shortBody = ["title", "image", "section", "quote", "stat"].includes(slide.layout);
+  // Alignment and text size only where the layout does not fix them.
+  const styled = ["content", "two-column", "section", "image-text"].includes(slide.layout);
+  const hasImage = slide.layout === "image" || slide.layout === "image-text";
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4 p-3 sm:p-6">
@@ -194,6 +215,21 @@ export function Editor({ deckId, navigate }: { deckId: string; navigate: Navigat
             </option>
           ))}
         </select>
+        <label htmlFor={`${ids}-font`} className="text-sm font-semibold text-ink">
+          Font
+        </label>
+        <select
+          id={`${ids}-font`}
+          value={deck.font ?? "classic"}
+          onChange={(event) => change({ ...deck, font: event.target.value as Font })}
+          className={SELECT}
+        >
+          {FONTS.map((font) => (
+            <option key={font} value={font}>
+              {FONT_LABELS[font]}
+            </option>
+          ))}
+        </select>
         <Button onClick={() => download(`${fileStem(deck.title)}.md`, deckToMarkdown(deck), "text/markdown")}>Export Markdown</Button>
         <Button onClick={() => download(`${fileStem(deck.title)}.json`, JSON.stringify(toBackup([deck])), "application/json")}>
           Export JSON
@@ -217,7 +253,7 @@ export function Editor({ deckId, navigate }: { deckId: string; navigate: Navigat
                   aria-label={`Slide ${i + 1}${item.title ? `: ${item.title}` : ""}`}
                   className={`w-32 overflow-hidden rounded-md lg:w-full ${FOCUS} ${i === current ? "ring-2 ring-accent ring-offset-2 ring-offset-paper" : "opacity-90 hover:opacity-100"}`}
                 >
-                  <SlideView slide={item} theme={deck.theme} className="pointer-events-none" />
+                  <SlideView slide={item} theme={deck.theme} font={deck.font} className="pointer-events-none" />
                 </button>
               </li>
             ))}
@@ -245,6 +281,40 @@ export function Editor({ deckId, navigate }: { deckId: string; navigate: Navigat
                 </option>
               ))}
             </select>
+            {styled && (
+              <>
+                <label htmlFor={`${ids}-align`} className="text-sm font-semibold text-ink">
+                  Align
+                </label>
+                <select
+                  id={`${ids}-align`}
+                  value={slide.align ?? "left"}
+                  onChange={(event) => edit({ align: event.target.value as Align })}
+                  className={SELECT}
+                >
+                  {ALIGNS.map((align) => (
+                    <option key={align} value={align}>
+                      {align === "left" ? "Left" : "Centre"}
+                    </option>
+                  ))}
+                </select>
+                <label htmlFor={`${ids}-size`} className="text-sm font-semibold text-ink">
+                  Text size
+                </label>
+                <select
+                  id={`${ids}-size`}
+                  value={slide.size ?? "medium"}
+                  onChange={(event) => edit({ size: event.target.value as TextSize })}
+                  className={SELECT}
+                >
+                  {SIZES.map((size) => (
+                    <option key={size} value={size}>
+                      {size[0].toUpperCase() + size.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
             <div className="flex flex-wrap gap-1 sm:ml-auto">
               <Button variant="ghost" disabled={current === 0} onClick={() => apply(moveSlide(deck, current, current - 1))} aria-label="Move slide up">
                 ↑ Up
@@ -266,22 +336,22 @@ export function Editor({ deckId, navigate }: { deckId: string; navigate: Navigat
             </div>
           </div>
 
-          <SlideView slide={slide} theme={deck.theme} className="mx-auto max-w-3xl rounded-lg shadow-sm" />
+          <SlideView slide={slide} theme={deck.theme} font={deck.font} className="mx-auto max-w-3xl rounded-lg shadow-sm" />
 
           <div className="grid min-w-0 gap-4 md:grid-cols-2">
             <div className="flex min-w-0 flex-col gap-4">
-              <Field label="Title" htmlFor={`${ids}-slide-title`}>
+              <Field label={titleLabel[slide.layout] ?? "Title"} htmlFor={`${ids}-slide-title`}>
                 <input id={`${ids}-slide-title`} value={slide.title} onChange={(event) => edit({ title: event.target.value })} className={INPUT} />
               </Field>
               <Field
                 label={bodyLabel[slide.layout]}
                 htmlFor={`${ids}-body`}
-                hint={slide.layout === "image" ? undefined : "Start a line with - for a bullet; indent two spaces to nest. **bold**, *italic*, `code`."}
+                hint={slide.layout === "image" || slide.layout === "stat" ? undefined : "Start a line with - for a bullet; indent two spaces to nest. **bold**, *italic*, `code`."}
               >
                 <textarea
                   id={`${ids}-body`}
                   value={slide.body}
-                  rows={slide.layout === "title" || slide.layout === "image" ? 2 : 7}
+                  rows={shortBody ? 3 : 7}
                   onChange={(event) => edit({ body: event.target.value })}
                   className={`${INPUT} font-mono text-sm`}
                 />
@@ -297,7 +367,12 @@ export function Editor({ deckId, navigate }: { deckId: string; navigate: Navigat
                   />
                 </Field>
               )}
-              {slide.layout === "image" && <ImagePicker hasImage={Boolean(slide.image)} onPick={pickImage} onRemove={() => edit({ image: "" })} />}
+              {slide.layout === "quote" && (
+                <Field label="Attribution" htmlFor={`${ids}-body2`}>
+                  <input id={`${ids}-body2`} value={slide.body2} onChange={(event) => edit({ body2: event.target.value })} className={INPUT} />
+                </Field>
+              )}
+              {hasImage && <ImagePicker hasImage={Boolean(slide.image)} onPick={pickImage} onRemove={() => edit({ image: "" })} />}
             </div>
             <Field label="Speaker notes" htmlFor={`${ids}-notes`} hint="Shown in the presenter view, never on the slide.">
               <textarea
@@ -367,7 +442,7 @@ function PrintDeck({ deck }: { deck: Deck }) {
     <div className="hidden print:block">
       {deck.slides.map((slide) => (
         <div key={slide.id} className="break-after-page">
-          <SlideView slide={slide} theme={deck.theme} />
+          <SlideView slide={slide} theme={deck.theme} font={deck.font} />
         </div>
       ))}
     </div>,
