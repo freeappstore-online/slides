@@ -91,7 +91,7 @@ describe("validation", () => {
 
   it("accepts the new layouts, themes, fonts and text styles", () => {
     const slide = { ...oldDeck.slides[0], layout: "image-text", align: "center", size: "large" };
-    expect(isDeck({ ...oldDeck, theme: "midnight", font: "rounded", slides: [slide] })).toBe(true);
+    expect(isDeck({ ...oldDeck, theme: "midnight", font: "mono", slides: [slide] })).toBe(true);
   });
 
   it("rejects unknown fonts, alignments and sizes", () => {

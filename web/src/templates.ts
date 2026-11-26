@@ -62,7 +62,7 @@ export const TEMPLATES: Template[] = [
     name: "Lesson",
     description: "Objectives, concepts, an example and a recap.",
     theme: "sky",
-    font: "rounded",
+    font: "system",
     slides: [
       { layout: "title", title: "Lesson title", body: "Subject · Class or year" },
       { layout: "content", title: "Today you will", body: "- Learn what … means\n- Practise …\n- Be able to explain …" },

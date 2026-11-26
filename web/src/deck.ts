@@ -50,17 +50,20 @@ export const THEME_LABELS: Record<Theme, string> = {
   lemon: "Lemon",
 };
 
-/** Per-deck font pairing. "classic" is the original look and the default for decks without a font. */
-export const FONTS = ["classic", "sans", "serif", "rounded", "mono", "display"] as const;
+/**
+ * Per-deck font pairing, from the brand fonts and system stacks only (see .slide-font-* in index.css).
+ * "classic" is the original look and the default for decks without a font.
+ */
+export const FONTS = ["classic", "sans", "serif", "mono", "display", "system"] as const;
 export type Font = (typeof FONTS)[number];
 
 export const FONT_LABELS: Record<Font, string> = {
   classic: "Classic",
   sans: "Sans",
   serif: "Serif",
-  rounded: "Rounded",
   mono: "Mono",
   display: "Display",
+  system: "System",
 };
 
 export const ALIGNS = ["left", "center"] as const;

@@ -136,6 +136,20 @@ html { overflow-wrap: anywhere; }
 body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
 img, video, canvas { max-width: 100%; }
 
+/* Per-deck slide fonts (deck.ts FONTS): only the brand fonts and system
+   stacks, so every pairing renders offline. Headings carry .slide-heading. */
+.slide-font-classic .slide-heading { font-family: var(--font-display); }
+.slide-font-sans, .slide-font-sans .slide-heading { font-family: "Manrope", system-ui, sans-serif; }
+.slide-font-serif, .slide-font-serif .slide-heading { font-family: Georgia, ui-serif, serif; }
+.slide-font-mono, .slide-font-mono .slide-heading { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.slide-font-display .slide-heading {
+  font-family: "Manrope", system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+.slide-font-system, .slide-font-system .slide-heading { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+
 /* Print / PDF: the editor portals every slide into a print-only container;
    one slide per landscape page, with theme backgrounds kept. */
 @media print {

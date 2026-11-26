@@ -1,8 +1,4 @@
-import { type CSSProperties, Fragment } from "react";
-import "@fontsource/nunito/latin-400.css";
-import "@fontsource/nunito/latin-800.css";
-import "@fontsource/bricolage-grotesque/latin-400.css";
-import "@fontsource/bricolage-grotesque/latin-800.css";
+import { Fragment } from "react";
 import type { Font, Slide, TextSize, Theme } from "../deck";
 import { parseBody, parseInline } from "../markdown";
 
@@ -28,24 +24,6 @@ const THEME_CLASSES: Record<Theme, { slide: string; rule: string; accent: string
 export const THEME_SWATCH: Record<Theme, string> = Object.fromEntries(
   Object.entries(THEME_CLASSES).map(([theme, classes]) => [theme, classes.slide]),
 ) as Record<Theme, string>;
-
-// Heading and body font stacks. Nunito and Bricolage Grotesque are bundled with
-// the app (and precached), the rest are system fonts, so every pairing works offline.
-const SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const FONT_STACKS: Record<Font, { heading: string; body: string }> = {
-  classic: { heading: "var(--font-display)", body: "inherit" },
-  sans: { heading: SANS, body: SANS },
-  serif: {
-    heading: '"Iowan Old Style", "Palatino Linotype", Palatino, Charter, "Bitstream Charter", Georgia, serif',
-    body: 'Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif',
-  },
-  rounded: { heading: '"Nunito", ui-rounded, "Arial Rounded MT", sans-serif', body: '"Nunito", ui-rounded, sans-serif' },
-  mono: {
-    heading: 'ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace',
-    body: 'ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace',
-  },
-  display: { heading: '"Bricolage Grotesque", Impact, sans-serif', body: `"Bricolage Grotesque", ${SANS}` },
-};
 
 const SIZE_SCALE: Record<TextSize, string> = { small: "0.8em", medium: "1em", large: "1.25em" };
 
@@ -102,7 +80,7 @@ const TITLE_SIZES = { xl: "text-[7.6cqw]", lg: "text-[6.4cqw]", md: "text-[4.4cq
 function Title({ text, size, className = "" }: { text: string; size: keyof typeof TITLE_SIZES; className?: string }) {
   if (!text) return null;
   return (
-    <h2 className={`leading-tight font-bold ${TITLE_SIZES[size]} ${className}`} style={{ fontFamily: "var(--slide-heading)" }}>
+    <h2 className={`slide-heading leading-tight font-bold ${TITLE_SIZES[size]} ${className}`}>
       <InlineText text={text} />
     </h2>
   );
@@ -118,7 +96,6 @@ export interface SlideViewProps {
 /** One slide at 16:9. All sizes are relative to the slide width, so it scales from thumbnail to fullscreen. */
 export function SlideView({ slide, theme, font = "classic", className = "" }: SlideViewProps) {
   const classes = THEME_CLASSES[theme];
-  const stack = FONT_STACKS[font];
   const centered = slide.align === "center";
   const align = centered ? "items-center text-center" : "";
   const bodyStyle = { fontSize: SIZE_SCALE[slide.size ?? "medium"] };
@@ -153,10 +130,10 @@ export function SlideView({ slide, theme, font = "classic", className = "" }: Sl
     case "quote":
       content = (
         <div className="flex h-full flex-col items-center justify-center gap-[2.4cqw] px-[10cqw] text-center">
-          <span aria-hidden="true" className={`h-[6cqw] text-[14cqw] leading-none font-bold ${classes.accent}`} style={{ fontFamily: "Georgia, serif" }}>
+          <span aria-hidden="true" className={`h-[6cqw] font-serif text-[14cqw] leading-none font-bold ${classes.accent}`}>
             “
           </span>
-          <div className="text-[3.8cqw] leading-snug italic" style={{ fontFamily: "var(--slide-heading)" }}>
+          <div className="slide-heading text-[3.8cqw] leading-snug italic">
             <div style={bodyStyle}>
               <Body text={slide.body} className="items-center" />
             </div>
@@ -169,7 +146,7 @@ export function SlideView({ slide, theme, font = "classic", className = "" }: Sl
     case "stat":
       content = (
         <div className="flex h-full flex-col items-center justify-center gap-[1.6cqw] px-[8cqw] text-center">
-          <p className={`text-[16cqw] leading-none font-extrabold tracking-tight ${classes.accent}`} style={{ fontFamily: "var(--slide-heading)" }}>
+          <p className={`slide-heading text-[16cqw] leading-none font-extrabold tracking-tight ${classes.accent}`}>
             {slide.title}
           </p>
           <Body text={slide.body} className="max-w-[70cqw] items-center text-[3.2cqw]" />
@@ -218,8 +195,7 @@ export function SlideView({ slide, theme, font = "classic", className = "" }: Sl
 
   return (
     <div
-      className={`@container aspect-video w-full overflow-hidden text-left ${classes.slide} ${className}`}
-      style={{ fontFamily: stack.body, "--slide-heading": stack.heading } as CSSProperties}
+      className={`@container slide-font-${font} aspect-video w-full overflow-hidden text-left ${classes.slide} ${className}`}
     >
       <div className="flex h-full w-full flex-col overflow-hidden text-[2.6cqw] leading-snug">{content}</div>
     </div>
