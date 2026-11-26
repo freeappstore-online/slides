@@ -8,6 +8,7 @@ import {
   duplicateSlide,
   isDeck,
   moveSlide,
+  normaliseDeck,
   parseBackup,
   toBackup,
   updateSlide,
@@ -124,5 +125,57 @@ describe("backup", () => {
     expect(() => parseBackup('{"app":"notes","decks":[]}')).toThrow(/not a Slides backup/);
     expect(() => parseBackup('{"app":"slides","version":2,"decks":[]}')).toThrow(/newer version/);
     expect(() => parseBackup('{"app":"slides","version":1,"decks":[{"id":1}]}')).toThrow(/damaged/);
+  });
+});
+
+describe("normaliseDeck", () => {
+  it("completes a minimal document an AI might write", () => {
+    const result = normaliseDeck(
+      {
+        title: "From AI",
+        theme: "midnight",
+        slides: [
+          { layout: "title", title: "Hello" },
+          { layout: "content", title: "Points", body: ["one", "- two"] },
+          { title: "No layout", body: "text" },
+          { layout: "nonsense", image: "https://example.com/a.png" },
+          "not a slide",
+        ],
+      },
+      "r1",
+      1000,
+      50,
+    );
+    expect(isDeck(result)).toBe(true);
+    expect(result).toMatchObject({ id: "r1", title: "From AI", theme: "midnight", createdAt: 50, updatedAt: 1000 });
+    expect(result?.font).toBeUndefined();
+    expect(result?.slides.map((s) => s.layout)).toEqual(["title", "content", "content", "image"]);
+    expect(result?.slides[1].body).toBe("- one\n- two");
+    expect(result?.slides[0]).toMatchObject({ body: "", body2: "", image: "", notes: "" });
+  });
+
+  it("fills defaults for missing or invalid deck fields and gives duplicate slide ids new ones", () => {
+    const result = normaliseDeck(
+      { title: 7, theme: "nope", font: "comic", slides: [{ id: "x", layout: "quote" }, { id: "x", layout: "stat", align: "justify" }] },
+      "local",
+      9,
+    );
+    expect(isDeck(result)).toBe(true);
+    expect(result).toMatchObject({ title: "Untitled deck", theme: "paper" });
+    expect(result?.font).toBeUndefined();
+    expect(new Set(result?.slides.map((s) => s.id)).size).toBe(2);
+    expect(result?.slides[1].align).toBeUndefined();
+  });
+
+  it("gives a deck without slides a title slide, keeps the app's own fields and takes the later time", () => {
+    expect(normaliseDeck({ title: "Empty" }, "e", 5)?.slides).toMatchObject([{ layout: "title", title: "Empty" }]);
+    const original = { ...createDeck("Round trip"), font: "serif" as const, updatedAt: 3 };
+    const { id, ...stored } = original;
+    expect(normaliseDeck(stored, id, 2)).toEqual(original);
+  });
+
+  it("rejects only things that are not objects", () => {
+    expect(normaliseDeck(null, "x", 1)).toBeUndefined();
+    expect(normaliseDeck([], "x", 1)).toBeUndefined();
   });
 });

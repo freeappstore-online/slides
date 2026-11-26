@@ -1,18 +1,12 @@
 // Device-local deck storage (IndexedDB via the persistence capability).
-// This is always the working copy. When signed in, cloudSync.ts also syncs it
-// with the account; signed out, decks stay on the device.
+// Decks never leave the device; the JSON backup is the way to move them.
 
 import type { LocalStore } from "@freeappstore/sdk/persist";
 import { openStore, withTransaction } from "../../fas-capabilities/persistence";
 import { isDeck, type Deck } from "./deck";
-import type { Links } from "./sync";
 
 const INDEX = "index";
 const deckKey = (id: string) => `deck:${id}`;
-const linksKey = (userId: string) => `sync:${userId}`;
-/** Fired on window after every local save or delete, so a sync can follow. */
-export const CHANGED_EVENT = "slides:changed";
-const changed = () => window.dispatchEvent(new Event(CHANGED_EVENT));
 const isIdList = (value: unknown): value is string[] => Array.isArray(value) && value.every((id) => typeof id === "string");
 
 let opening: Promise<LocalStore> | undefined;
@@ -26,6 +20,8 @@ function store(): Promise<LocalStore> {
       opening = undefined;
       throw new Error(`Storage is unavailable on this device (${result.reason}).`);
     }
+    // Drop the per-account `sync:<userId>` links left by the removed account sync (slides#3).
+    result.value.database.delete("records", IDBKeyRange.bound("sync:", "sync:\uffff")).catch(() => undefined);
     return result.value;
   });
   return opening;
@@ -69,7 +65,6 @@ export async function saveDecks(...decks: Deck[]): Promise<void> {
     await tx.put(INDEX, [...ids]);
   });
   if (!result.ok) fail(result.reason);
-  changed();
 }
 
 export async function removeDeck(id: string): Promise<void> {
@@ -79,18 +74,5 @@ export async function removeDeck(id: string): Promise<void> {
     await tx.put(INDEX, (isIdList(current) ? current : []).filter((other) => other !== id));
     await tx.delete(deckKey(id));
   });
-  if (!result.ok) fail(result.reason);
-  changed();
-}
-
-/** Sync links for one account (see sync.ts). */
-export async function loadLinks(userId: string): Promise<Links> {
-  const result = await withTransaction(await store(), "readonly", (tx) => tx.get(linksKey(userId)));
-  if (!result.ok) throw new Error(`Could not read sync state (${result.reason}).`);
-  return typeof result.value === "object" && result.value !== null ? (result.value as Links) : {};
-}
-
-export async function saveLinks(userId: string, links: Links): Promise<void> {
-  const result = await withTransaction(await store(), "readwrite", (tx) => tx.put(linksKey(userId), links));
   if (!result.ok) fail(result.reason);
 }

@@ -197,9 +197,9 @@ export function isDeck(value: unknown): value is Deck {
   );
 }
 
-// Documents from the account (another device, or an AI over MCP) may be
-// minimal: missing ids, timestamps, optional text fields, theme or font.
-// They are completed with defaults rather than dropped.
+// Decks written elsewhere (e.g. by an AI) may be minimal: missing ids,
+// timestamps, optional text fields, theme or font. They are completed with
+// defaults rather than dropped.
 
 const text = (value: unknown): string =>
   typeof value === "string"
@@ -233,9 +233,9 @@ function normaliseSlide(value: Record<string, unknown>, seen: Set<string>): Slid
 /**
  * A complete, valid deck from a stored document, keeping what is usable.
  * Returns undefined only for something that is not an object at all.
- * `id` is the local deck id; `serverUpdatedAt` is the server's last-change time.
+ * `id` is the local deck id; `changedAt` is when the document last changed.
  */
-export function normaliseDeck(value: unknown, id: string, serverUpdatedAt: number, now = Date.now()): Deck | undefined {
+export function normaliseDeck(value: unknown, id: string, changedAt: number, now = Date.now()): Deck | undefined {
   if (!isRecord(value) || Array.isArray(value)) return undefined;
   const title = text(value.title).trim() || "Untitled deck";
   const seen = new Set<string>();
@@ -248,8 +248,8 @@ export function normaliseDeck(value: unknown, id: string, serverUpdatedAt: numbe
     ...(FONTS.includes(value.font as Font) ? { font: value.font as Font } : {}),
     slides: slides.length > 0 ? slides : [createSlide({ layout: "title", title })],
     createdAt,
-    // An edit made elsewhere may not touch `updatedAt`; the server's time is when it last changed.
-    updatedAt: Math.max(typeof value.updatedAt === "number" ? value.updatedAt : 0, serverUpdatedAt),
+    // An edit made elsewhere may not touch `updatedAt`; `changedAt` is when it last changed.
+    updatedAt: Math.max(typeof value.updatedAt === "number" ? value.updatedAt : 0, changedAt),
   };
 }
 

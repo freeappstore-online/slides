@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { initApp } from "@freeappstore/sdk";
 import { useTheme } from "@freeappstore/sdk/hooks";
 import { type NavItem, PageHeader, Shell } from "@freeappstore/sdk/ui";
-import { useCloudSync } from "./cloudSync";
 import { DeckList } from "./components/DeckList";
 import { Editor } from "./components/Editor";
 import { Present, Presenter } from "./components/Present";
@@ -30,7 +29,6 @@ function parseRoute(path: string): Route {
 
 export default function App() {
   useTheme(); // applies the shared light/dark preference on every screen, including present mode
-  useCloudSync(fas); // signed in: decks sync with the account; signed out: device only
   const [path, setPath] = useState(() => window.location.pathname);
 
   // Keep the screen in step with the browser's back and forward buttons.
@@ -69,10 +67,8 @@ function About() {
       <PageHeader title="About" />
       <div className="flex max-w-2xl flex-col gap-3 text-ink">
         <p>
-          Slides is a free slide deck editor and presenter. Your decks are stored on this device, and the app works offline once it
-          has loaded. Sign in to sync them to your account: they then also appear on your other devices, and an AI assistant connected
-          to the FreeAppStore MCP server can make and edit decks for you. Decks with large embedded images are too big to sync and stay
-          on the device.
+          Slides is a free slide deck editor and presenter. Your decks and images are stored only on this device, and the app works
+          offline once it has loaded.
         </p>
         <p>
           Write slides as Markdown (one slide per <code>---</code>), present them full screen, and use the presenter view for speaker

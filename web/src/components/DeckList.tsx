@@ -1,7 +1,6 @@
 import { type FormEvent, type RefObject, useCallback, useEffect, useId, useRef, useState } from "react";
 import { ConfirmDialog, EmptyState, Modal, PageHeader, Spinner, useToast } from "@freeappstore/sdk/ui";
 import type { Navigate } from "../App";
-import { SYNCED_EVENT, useSyncStatus } from "../cloudSync";
 import { duplicateDeck, parseBackup, toBackup, type Deck } from "../deck";
 import { download } from "../files";
 import { markdownToDeck } from "../markdown";
@@ -31,12 +30,8 @@ export function DeckList({ navigate }: { navigate: Navigate }) {
     }
   }, []);
 
-  const sync = useSyncStatus();
-
   useEffect(() => {
     void refresh();
-    window.addEventListener(SYNCED_EVENT, refresh);
-    return () => window.removeEventListener(SYNCED_EVENT, refresh);
   }, [refresh]);
 
   async function run(action: () => Promise<void>) {
@@ -92,17 +87,7 @@ export function DeckList({ navigate }: { navigate: Navigate }) {
 
   return (
     <>
-      <PageHeader
-        title="Your decks"
-        description={
-          sync.phase === "off"
-            ? "Stored on this device only. Back up to move them elsewhere."
-            : sync.phase === "error"
-              ? `Kept on this device. Sync with your account failed (${sync.error}); it will try again.`
-              : `Kept on this device and synced to your account${sync.phase === "syncing" ? " (syncing…)" : ""}.`
-        }
-        actions={actions}
-      />
+      <PageHeader title="Your decks" description="Stored on this device only. Back up to move them elsewhere." actions={actions} />
       <FileInput inputRef={markdownInput} accept=".md,.markdown,.txt,text/markdown,text/plain" label="Import Markdown file" onFile={importMarkdown} />
       <FileInput inputRef={backupInput} accept=".json,application/json" label="Restore backup file" onFile={restore} />
 
@@ -145,9 +130,6 @@ export function DeckList({ navigate }: { navigate: Navigate }) {
                 <p className="text-sm text-muted">
                   {deck.slides.length} slide{deck.slides.length === 1 ? "" : "s"} · edited {new Date(deck.updatedAt).toLocaleDateString()}
                 </p>
-                {sync.tooLarge.includes(deck.id) && (
-                  <p className="text-sm text-warning">Too large to sync (embedded images): kept on this device only.</p>
-                )}
                 <div className="-ml-2 flex flex-wrap gap-1 pt-1">
                   <Button variant="ghost" onClick={() => setRenaming(deck)} aria-label={`Rename ${deck.title}`}>
                     Rename

@@ -2,7 +2,6 @@ import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from 
 import { createPortal } from "react-dom";
 import { ConfirmDialog, EmptyState, Spinner, useDocumentTitle, useToast } from "@freeappstore/sdk/ui";
 import type { Navigate } from "../App";
-import { SYNCED_EVENT, useSyncStatus } from "../cloudSync";
 import {
   addSlide,
   ALIGNS,
@@ -91,23 +90,12 @@ export function Editor({ deckId, navigate }: { deckId: string; navigate: Navigat
   const latest = useRef({ deck, index });
   latest.current = { deck, index };
   useDocumentTitle(deck ? `${deck.title} — Slides` : "Slides");
-  const sync = useSyncStatus();
-  const saveState = useRef(save.state);
-  saveState.current = save.state;
 
   useEffect(() => {
-    const load = () =>
-      loadDeck(deckId).then(
-        (loaded) => setDeck(loaded ?? null),
-        (error: unknown) => setLoadError(error instanceof Error ? error.message : "Could not open this deck."),
-      );
-    void load();
-    // A newer version from the account replaces what is shown, unless there are unsaved edits here.
-    const onSynced = (event: Event) => {
-      if ((event as CustomEvent<string[]>).detail.includes(deckId) && saveState.current === "saved") void load();
-    };
-    window.addEventListener(SYNCED_EVENT, onSynced);
-    return () => window.removeEventListener(SYNCED_EVENT, onSynced);
+    loadDeck(deckId).then(
+      (loaded) => setDeck(loaded ?? null),
+      (error: unknown) => setLoadError(error instanceof Error ? error.message : "Could not open this deck."),
+    );
   }, [deckId]);
 
   if (loadError) return <Centered><p role="alert" className="text-danger">{loadError}</p></Centered>;
@@ -203,19 +191,7 @@ export function Editor({ deckId, navigate }: { deckId: string; navigate: Navigat
           />
         </div>
         <p role="status" className="min-h-11 content-center text-sm text-muted">
-          {save.state === "saving" ? (
-            "Saving…"
-          ) : save.state === "error" ? (
-            <span className="text-danger">Not saved</span>
-          ) : sync.tooLarge.includes(deck.id) ? (
-            "Saved on this device · too large to sync (embedded images)"
-          ) : sync.phase === "off" ? (
-            "Saved on this device"
-          ) : sync.phase === "error" ? (
-            "Saved on this device · sync failed, will retry"
-          ) : (
-            "Saved · syncs to your account"
-          )}
+          {save.state === "saving" ? "Saving…" : save.state === "error" ? <span className="text-danger">Not saved</span> : "Saved on this device"}
         </p>
       </div>
 
