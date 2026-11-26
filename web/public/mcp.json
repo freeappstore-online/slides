@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "instructions": "# Slides\n\nSlides is a slide deck editor and presenter. Each document in the `decks` collection is one presentation. Decks you save appear in the user's Slides app (https://slides.freeappstore.online) the next time it is open and signed in, on every device. The user can then edit, present and export them.\n\n## Making a good deck\n\n- Ask what the talk is for, who the audience is and how long it is, unless that's already clear. Plan roughly one slide per 1–2 minutes: 6–12 slides for a short talk, rarely more than 20.\n- Start with a `title` slide and end with a closing slide (summary, call to action or \"Thank you\" with contact details).\n- Use `section` slides to divide longer decks into parts.\n- One idea per slide. Keep a slide to 3–6 bullets of a few words each; put the detail in `notes`, which only the presenter sees.\n- Vary the layouts: a `stat` for a key number, a `quote` for a voice, `two-column` for comparisons or before/after.\n- Write real content for the topic. Don't use lorem ipsum.\n\n## Document shape\n\n```json\n{\n  \"title\": \"Deck title\",\n  \"theme\": \"midnight\",\n  \"font\": \"display\",\n  \"slides\": [\n    { \"layout\": \"title\", \"title\": \"Deck title\", \"body\": \"Subtitle · Name · Date\" },\n    { \"layout\": \"content\", \"title\": \"Why now\", \"body\": \"- First point\\n- Second point\\n  - A nested point\", \"notes\": \"What to say here.\" }\n  ]\n}\n```\n\nOnly `title` and `slides` (each with `layout` and `title`) are required; the app fills in everything else. Don't send `id`, `createdAt` or `updatedAt`: the app and server manage them. When updating a deck, send the whole `slides` array: saving replaces top-level fields as a whole.\n\n## Layouts and their fields\n\n| layout | `title` | `body` | `body2` | `image` |\n|---|---|---|---|---|\n| `title` | deck title, large and centred | subtitle | – | – |\n| `content` | slide heading | bullets or paragraphs | – | – |\n| `two-column` | slide heading | left column | right column | – |\n| `image` | slide heading | caption | – | image URL |\n| `section` | section name, very large | short subtitle | – | – |\n| `quote` | optional small heading | the quote (no quote marks) | who said it | – |\n| `stat` | the number itself, e.g. `\"87%\"`, `\"$4.2B\"`, `\"3×\"` | what the number means | – | – |\n| `image-text` | slide heading | text beside the image | – | image URL |\n\n### Text in `body` and `body2`\n\n- A line starting with `- ` is a bullet; indent two spaces per level to nest (up to 3 levels).\n- Blank lines separate paragraphs. Use `\\n` for line breaks inside the JSON string.\n- Inline `**bold**`, `*italic*` and `` `code` ``; fenced code blocks with ``` work too.\n\n### Images\n\nUse `https://` URLs of images that are publicly reachable and that you are allowed to use. Never embed `data:` URLs: a deck document must stay under 64 KB.\n\n### Speaker notes\n\n`notes` on any slide: plain text the presenter sees in the presenter view, never shown on the slide.\n\n### Text style (optional)\n\nOn `content`, `two-column`, `section` and `image-text` slides:\n- `align`: `\"left\"` (default) or `\"center\"`.\n- `size`: `\"small\"`, `\"medium\"` (default) or `\"large\"` for the body text. Use `\"large\"` for slides with only a few words.\n\n## Themes (`theme`)\n\nLight/dark-adaptive (follow the app's light or dark mode): `paper` (default, clean white), `contrast`, `bold` (blue), `soft` (pale blue), `sky`, `mint`.\nAlways dark: `midnight` (navy and gold), `graphite` (charcoal and teal), `forest` (deep green and cream), `plum` (purple and pink), `terminal` (black and green, good with the `mono` font).\nStrong colour: `sunset` (orange–pink–purple gradient), `ocean` (blue–teal gradient), `lemon` (yellow and black).\n\n## Fonts (`font`)\n\n`classic` (default: serif headings, sans body), `sans`, `serif`, `mono`, `display` (bold uppercase headings), `system` (the device's own font).\n\nPick a theme and font that fit the audience: e.g. `paper` + `sans` for business updates, `midnight` + `display` for pitches, `sky` + `system` for lessons, `graphite` + `serif` for portfolios.\n",
+  "collections": {
+    "decks": {
+      "description": "One document per presentation: a title, a theme, a font and an ordered list of slides. Private to the signed-in user.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "title",
+          "slides"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Deck title."
+          },
+          "theme": {
+            "enum": [
+              "paper",
+              "contrast",
+              "bold",
+              "soft",
+              "sky",
+              "mint",
+              "midnight",
+              "graphite",
+              "forest",
+              "plum",
+              "terminal",
+              "sunset",
+              "ocean",
+              "lemon"
+            ],
+            "description": "Colour theme. Default paper."
+          },
+          "font": {
+            "enum": [
+              "classic",
+              "sans",
+              "serif",
+              "mono",
+              "display",
+              "system"
+            ],
+            "description": "Font pairing. Default classic."
+          },
+          "slides": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "required": [
+                "layout",
+                "title"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Managed by the app; omit when creating slides."
+                },
+                "layout": {
+                  "enum": [
+                    "title",
+                    "content",
+                    "two-column",
+                    "image",
+                    "section",
+                    "quote",
+                    "stat",
+                    "image-text"
+                  ]
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Heading; the number on a stat slide."
+                },
+                "body": {
+                  "type": "string",
+                  "description": "Main text. Lines starting with '- ' are bullets."
+                },
+                "body2": {
+                  "type": "string",
+                  "description": "Right column (two-column) or attribution (quote)."
+                },
+                "image": {
+                  "type": "string",
+                  "description": "https:// image URL for image and image-text slides."
+                },
+                "notes": {
+                  "type": "string",
+                  "description": "Speaker notes, never shown on the slide."
+                },
+                "align": {
+                  "enum": [
+                    "left",
+                    "center"
+                  ]
+                },
+                "size": {
+                  "enum": [
+                    "small",
+                    "medium",
+                    "large"
+                  ]
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "type": "number",
+            "description": "Managed by the app."
+          },
+          "updatedAt": {
+            "type": "number",
+            "description": "Managed by the app."
+          }
+        }
+      }
+    }
+  }
+}

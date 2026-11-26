@@ -197,6 +197,62 @@ export function isDeck(value: unknown): value is Deck {
   );
 }
 
+// Documents from the account (another device, or an AI over MCP) may be
+// minimal: missing ids, timestamps, optional text fields, theme or font.
+// They are completed with defaults rather than dropped.
+
+const text = (value: unknown): string =>
+  typeof value === "string"
+    ? value
+    : Array.isArray(value) // a list of lines, e.g. bullets an AI sent as an array
+      ? value
+          .filter((line): line is string => typeof line === "string")
+          .map((line) => (/^\s*[-*+]\s/.test(line) ? line : `- ${line}`))
+          .join("\n")
+      : "";
+
+function normaliseSlide(value: Record<string, unknown>, seen: Set<string>): Slide {
+  const image = text(value.image);
+  const layout = LAYOUTS.includes(value.layout as Layout) ? (value.layout as Layout) : image ? "image" : "content";
+  let id = typeof value.id === "string" && value.id ? value.id : newId();
+  if (seen.has(id)) id = newId();
+  seen.add(id);
+  return {
+    id,
+    layout,
+    title: text(value.title),
+    body: text(value.body),
+    body2: text(value.body2),
+    image,
+    notes: text(value.notes),
+    ...(ALIGNS.includes(value.align as Align) ? { align: value.align as Align } : {}),
+    ...(SIZES.includes(value.size as TextSize) ? { size: value.size as TextSize } : {}),
+  };
+}
+
+/**
+ * A complete, valid deck from a stored document, keeping what is usable.
+ * Returns undefined only for something that is not an object at all.
+ * `id` is the local deck id; `serverUpdatedAt` is the server's last-change time.
+ */
+export function normaliseDeck(value: unknown, id: string, serverUpdatedAt: number, now = Date.now()): Deck | undefined {
+  if (!isRecord(value) || Array.isArray(value)) return undefined;
+  const title = text(value.title).trim() || "Untitled deck";
+  const seen = new Set<string>();
+  const slides = (Array.isArray(value.slides) ? value.slides : []).filter(isRecord).map((slide) => normaliseSlide(slide, seen));
+  const createdAt = typeof value.createdAt === "number" ? value.createdAt : typeof value._createdAt === "number" ? value._createdAt : now;
+  return {
+    id,
+    title,
+    theme: THEMES.includes(value.theme as Theme) ? (value.theme as Theme) : "paper",
+    ...(FONTS.includes(value.font as Font) ? { font: value.font as Font } : {}),
+    slides: slides.length > 0 ? slides : [createSlide({ layout: "title", title })],
+    createdAt,
+    // An edit made elsewhere may not touch `updatedAt`; the server's time is when it last changed.
+    updatedAt: Math.max(typeof value.updatedAt === "number" ? value.updatedAt : 0, serverUpdatedAt),
+  };
+}
+
 // JSON backup: every deck, images included.
 
 export interface Backup {

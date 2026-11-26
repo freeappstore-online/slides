@@ -1,12 +1,18 @@
 // Device-local deck storage (IndexedDB via the persistence capability).
-// Decks never leave the device; the JSON backup is the way to move them.
+// This is always the working copy. When signed in, cloudSync.ts also syncs it
+// with the account; signed out, decks stay on the device.
 
 import type { LocalStore } from "@freeappstore/sdk/persist";
 import { openStore, withTransaction } from "../../fas-capabilities/persistence";
 import { isDeck, type Deck } from "./deck";
+import type { Links } from "./sync";
 
 const INDEX = "index";
 const deckKey = (id: string) => `deck:${id}`;
+const linksKey = (userId: string) => `sync:${userId}`;
+/** Fired on window after every local save or delete, so a sync can follow. */
+export const CHANGED_EVENT = "slides:changed";
+const changed = () => window.dispatchEvent(new Event(CHANGED_EVENT));
 const isIdList = (value: unknown): value is string[] => Array.isArray(value) && value.every((id) => typeof id === "string");
 
 let opening: Promise<LocalStore> | undefined;
@@ -63,6 +69,7 @@ export async function saveDecks(...decks: Deck[]): Promise<void> {
     await tx.put(INDEX, [...ids]);
   });
   if (!result.ok) fail(result.reason);
+  changed();
 }
 
 export async function removeDeck(id: string): Promise<void> {
@@ -72,5 +79,18 @@ export async function removeDeck(id: string): Promise<void> {
     await tx.put(INDEX, (isIdList(current) ? current : []).filter((other) => other !== id));
     await tx.delete(deckKey(id));
   });
+  if (!result.ok) fail(result.reason);
+  changed();
+}
+
+/** Sync links for one account (see sync.ts). */
+export async function loadLinks(userId: string): Promise<Links> {
+  const result = await withTransaction(await store(), "readonly", (tx) => tx.get(linksKey(userId)));
+  if (!result.ok) throw new Error(`Could not read sync state (${result.reason}).`);
+  return typeof result.value === "object" && result.value !== null ? (result.value as Links) : {};
+}
+
+export async function saveLinks(userId: string, links: Links): Promise<void> {
+  const result = await withTransaction(await store(), "readwrite", (tx) => tx.put(linksKey(userId), links));
   if (!result.ok) fail(result.reason);
 }

@@ -40,7 +40,11 @@ https://github.com/freeappstore-online/platform/blob/main/CONTRIBUTING.md#updati
 ## Slides (app-specific)
 
 Offline slide deck editor and presenter. Decks (images included, as data: URLs) live in
-IndexedDB via `web/src/storage.ts`; nothing is synced. Pure logic is in `web/src/deck.ts`
-(deck operations, JSON backup) and `web/src/markdown.ts` (Markdown import/export, `---`
-separates slides), both unit tested. Routes: `/`, `/deck/<id>`, `/deck/<id>/present`,
+IndexedDB via `web/src/storage.ts`, always the working copy. Signed in, `web/src/cloudSync.ts`
+syncs them both ways with the private `decks` collection (plan in `web/src/sync.ts`,
+last edit wins; decks over 64 KB stay local). `web/public/mcp.json` describes that collection
+for AI clients over the FreeAppStore MCP server: keep its enums in step with `deck.ts`
+(a test checks). Pure logic is in `web/src/deck.ts` (deck operations, validation,
+normalising server documents, JSON backup), `web/src/markdown.ts` (Markdown import/export,
+`---` separates slides) and `web/src/templates.ts`, all unit tested. Routes: `/`, `/deck/<id>`, `/deck/<id>/present`,
 `/deck/<id>/presenter` (synced with an audience window over BroadcastChannel).
